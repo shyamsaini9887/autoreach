@@ -401,17 +401,19 @@ class JpwHook : IXposedHookLoadPackage {
                 object : XC_MethodReplacement() {
                     override fun replaceHookedMethod(p: MethodHookParam): Any? {
                         try {
-                            val promise = p.args[0] as? com.facebook.react.bridge.Promise
-                            if (promise != null) {
-                                // Return a WritableNativeMap with empty integrityToken
-                                // The JS side will see token is empty/absent and skip the header
-                                val map = com.facebook.react.bridge.Arguments.createMap()
-                                map.putString("integrityToken", "")
-                                promise.resolve(map)
-                                log("✓ getAppIntegrityToken → resolved with empty token")
-                            }
+                            val promise = p.args[0] ?: return null
+                            // Resolve promise with empty integrity token using reflection
+                            val argumentsClass = XposedHelpers.findClass("com.facebook.react.bridge.Arguments", cl)
+                            val map = XposedHelpers.callStaticMethod(argumentsClass, "createMap")
+                            XposedHelpers.callMethod(map, "putString", "integrityToken", "")
+                            XposedHelpers.callMethod(promise, "resolve", map)
+                            log("✓ getAppIntegrityToken → resolved with empty token")
                         } catch (e: Throwable) {
                             log("✗ getAppIntegrityToken promise error: $e")
+                            try {
+                                val promise = p.args[0] ?: return null
+                                XposedHelpers.callMethod(promise, "reject", "BYPASS", "Integrity bypassed")
+                            } catch (_: Throwable) {}
                         }
                         return null
                     }
