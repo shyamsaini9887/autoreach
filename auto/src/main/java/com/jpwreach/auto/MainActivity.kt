@@ -85,8 +85,8 @@ class MainActivity : AppCompatActivity() {
             val jioId = it.getStringExtra("jio_center_id")
             if (jioId != null) jioCenterId = jioId
 
-            val id = it.getStringExtra("tech_id") ?: prefs.getString("tech_id", "")
-            val pass = it.getStringExtra("tech_pass") ?: prefs.getString("tech_pass", "")
+            val id = it.getStringExtra("tech_id") ?: prefs.getString("tech_id", "") ?: ""
+            val pass = it.getStringExtra("tech_pass") ?: prefs.getString("tech_pass", "") ?: ""
             if (id.isNotEmpty() && pass.isNotEmpty()) {
                 idField.setText(id)
                 passField.setText(pass)
@@ -140,7 +140,8 @@ class MainActivity : AppCompatActivity() {
             )
             val loginUrl = "https://jpw.jio.com/api/login/SAML/UserLogin"
             val loginResult = httpPost(loginUrl, loginPayload, mapOf("Referer" to "https://jpw.jio.com/v1/OIDLOGIN"))
-            sessionCookies = loginResult.cookies
+            sessionCookies.clear()
+            sessionCookies.putAll(loginResult.cookies)
             val loginData = gson.fromJson(loginResult.body, Map::class.java)
             if (loginData["IsSuccessful"] != true) {
                 val err = (loginData["ErrorInfo"] as? Map<*,*>)?.get("UserMessage") ?: "Login failed"
@@ -306,7 +307,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showStatus(msg: String) {
-        withContext(Dispatchers.Main) { statusText.text = msg }
+        runOnUiThread { statusText.text = msg }
     }
 
     private fun toast(msg: String) {
